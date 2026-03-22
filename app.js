@@ -4,6 +4,13 @@
    selector, practice stopwatch, exam countdown
    ============================================ */
 'use strict';
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/quiz-master/service-worker.js', { scope: '/quiz-master/' })
+      .then(reg => console.log('Service Worker OK'))
+      .catch(err => console.log('Service Worker Problem: ' + err));
+  });
+}
 
 // ── APP STATE ────────────────────────────────────────────
 const App = {
