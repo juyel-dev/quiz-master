@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Quiz Master — Multi-class, multi-subject quiz app" />
+  <meta name="theme-color" content="#0f0c29" />
+  <title>Quiz Master</title>
+
+  <link rel="manifest" href="pwa/manifest.json" />
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+  <script>tailwind.config={darkMode:['class'],theme:{extend:{fontFamily:{siliguri:['Hind Siliguri','sans-serif'],space:['Space Grotesk','sans-serif']}}}};</script>
+</head>
+<body class="font-siliguri min-h-screen overflow-x-hidden">
+
+  <div class="bg-orbs" aria-hidden="true"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
+  <div class="noise-overlay" aria-hidden="true"></div>
+
+  <!-- Global Back -->
+  <button id="btn-back" onclick="navigateBack()" class="hidden fixed top-4 left-4 z-40 icon-btn" aria-label="Back">
+    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+  </button>
+
+  <div id="app" class="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-10">
+
+    <!-- ══════════════ HOME ══════════════ -->
+    <section id="screen-home" class="screen active w-full max-w-lg">
+
+      <div class="text-center mb-6 animate-fadeIn">
+        <div class="logo-ring mx-auto mb-3"><span class="logo-icon">⚡</span></div>
+        <h1 class="text-5xl font-bold font-space tracking-tight text-white mb-1">Quiz <span class="text-gradient">Master</span></h1>
+        <p class="text-slate-400 text-sm">Test your knowledge · আপনার জ্ঞান পরীক্ষা করুন</p>
+      </div>
+
+      <!-- Language -->
+      <div class="flex justify-center mb-5">
+        <div class="lang-toggle px-1 py-1 flex gap-1 rounded-full">
+          <button id="btn-lang-en" class="lang-btn active" onclick="setLanguage('en')">English</button>
+          <button id="btn-lang-bn" class="lang-btn" onclick="setLanguage('bn')">বাংলা</button>
+        </div>
+      </div>
+
+      <div class="glass-card rounded-3xl p-5 mb-4 animate-slideUp">
+
+        <!-- Loading -->
+        <div id="home-loading" class="text-center py-10">
+          <div class="loader mx-auto mb-3"></div>
+          <p class="text-slate-400 text-sm">Loading master data…</p>
+        </div>
+
+        <!-- Error -->
+        <div id="home-error" class="hidden text-center py-10">
+          <div class="text-5xl mb-3">⚠️</div>
+          <p class="text-red-400 font-semibold mb-1" id="txt-error">Master sheet not accessible</p>
+          <p class="text-slate-500 text-xs mb-4">Make sure the sheet is publicly shared</p>
+          <button onclick="retryMasterLoad()" class="btn-secondary px-5 py-2 rounded-xl text-sm">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 inline mr-1"></i> Retry
+          </button>
+        </div>
+
+        <!-- Form -->
+        <div id="home-form" class="hidden space-y-3.5">
+
+          <!-- ① Class -->
+          <div class="form-group">
+            <label class="form-label"><i data-lucide="graduation-cap" class="w-3.5 h-3.5 inline mr-1"></i>
+              <span data-lang-en="Class" data-lang-bn="ক্লাস">Class</span>
+            </label>
+            <select id="sel-class" class="form-select" onchange="_onClassChange()">
+              <option value="">— Select Class —</option>
+            </select>
+          </div>
+
+          <!-- ② Subject -->
+          <div class="form-group">
+            <label class="form-label"><i data-lucide="layers" class="w-3.5 h-3.5 inline mr-1"></i>
+              <span data-lang-en="Subject" data-lang-bn="বিষয়">Subject</span>
+            </label>
+            <select id="sel-subject" class="form-select" onchange="_onSubjectChange()">
+              <option value="">— Subject —</option>
+            </select>
+          </div>
+
+          <!-- ③ Chapter -->
+          <div class="form-group">
+            <label class="form-label"><i data-lucide="book-open" class="w-3.5 h-3.5 inline mr-1"></i>
+              <span data-lang-en="Chapter" data-lang-bn="অধ্যায়">Chapter</span>
+            </label>
+            <select id="sel-chapter" class="form-select" onchange="_onChapterChange()">
+              <option value="">— Chapter —</option>
+            </select>
+          </div>
+
+          <!-- ④ Difficulty -->
+          <div class="form-group">
+            <label class="form-label"><i data-lucide="zap" class="w-3.5 h-3.5 inline mr-1"></i>
+              <span data-lang-en="Difficulty" data-lang-bn="কঠিনতা">Difficulty</span>
+            </label>
+            <select id="sel-difficulty" class="form-select" onchange="_onDifficultyChange()">
+              <option value="all"    data-lang-en="All Levels" data-lang-bn="সব স্তর">All Levels</option>
+              <option value="easy"   data-lang-en="Easy"       data-lang-bn="সহজ">Easy</option>
+              <option value="medium" data-lang-en="Medium"     data-lang-bn="মাঝারি">Medium</option>
+              <option value="hard"   data-lang-en="Hard"       data-lang-bn="কঠিন">Hard</option>
+            </select>
+          </div>
+
+          <!-- ⑤ Question Count -->
+          <div class="form-group">
+            <label class="form-label"><i data-lucide="hash" class="w-3.5 h-3.5 inline mr-1"></i>
+              <span data-lang-en="Number of Questions" data-lang-bn="প্রশ্নের সংখ্যা">Number of Questions</span>
+            </label>
+            <div class="flex items-center gap-3">
+              <input type="range" id="qcount-range" min="5" max="50" step="5" value="10"
+                class="range-slider flex-1"
+                oninput="document.getElementById('inp-qcount').value=this.value;App.qCount=parseInt(this.value);_updatePoolCount();" />
+              <input type="number" id="inp-qcount" value="10" min="1" max="200"
+                class="form-input-sm w-16 text-center"
+                oninput="document.getElementById('qcount-range').value=Math.min(50,this.value);App.qCount=parseInt(this.value)||5;_updatePoolCount();" />
+            </div>
+          </div>
+
+          <!-- Pool count + cache age -->
+          <div class="flex items-center justify-between px-0.5">
+            <span id="q-pool-count" class="text-xs text-slate-500"></span>
+            <span id="cache-age"    class="text-xs text-slate-600"></span>
+          </div>
+
+          <!-- ⑥ Mode -->
+          <div class="form-group">
+            <label class="form-label"><i data-lucide="layout" class="w-3.5 h-3.5 inline mr-1"></i>
+              <span data-lang-en="Mode" data-lang-bn="মোড">Mode</span>
+            </label>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="mode-practice" class="mode-btn active" onclick="setMode('practice')">
+                <i data-lucide="book" class="w-4 h-4 mx-auto mb-1"></i>
+                <span class="text-xs font-semibold" data-lang-en="Practice" data-lang-bn="অনুশীলন">Practice</span>
+                <span class="text-xs text-slate-400" data-lang-en="Stopwatch" data-lang-bn="সময় গণনা">Stopwatch</span>
+              </button>
+              <button id="mode-exam" class="mode-btn" onclick="setMode('exam')">
+                <i data-lucide="clock" class="w-4 h-4 mx-auto mb-1"></i>
+                <span class="text-xs font-semibold" data-lang-en="Exam" data-lang-bn="পরীক্ষা">Exam</span>
+                <span class="text-xs text-slate-400" id="exam-timer-hint" class="hidden">5 min countdown</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ⑦ Settings -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="setting-card">
+              <div class="flex items-center justify-between">
+                <div><p class="text-xs text-white font-medium" data-lang-en="Neg. Marking" data-lang-bn="নেগেটিভ">Neg. Marking</p><p class="text-xs text-slate-400">-0.25 (Hard)</p></div>
+                <label class="toggle-switch"><input type="checkbox" id="tog-negative"/><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+            <div class="setting-card">
+              <div class="flex items-center justify-between">
+                <div><p class="text-xs text-white font-medium" data-lang-en="Sound" data-lang-bn="সাউন্ড">Sound</p><p class="text-xs text-slate-400" data-lang-en="Audio FX" data-lang-bn="অডিও">Audio FX</p></div>
+                <label class="toggle-switch"><input type="checkbox" id="tog-sound" checked/><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Streak -->
+          <div id="streak-bar" class="streak-bar hidden">
+            <div class="flex items-center gap-2"><span class="text-xl">🔥</span><div><p class="text-xs text-slate-400" data-lang-en="Streak" data-lang-bn="স্ট্রিক">Streak</p><p class="text-sm font-bold text-orange-400" id="streak-count">0 days</p></div></div>
+            <div class="flex items-center gap-2"><span class="text-xl">🏆</span><div><p class="text-xs text-slate-400" data-lang-en="Best" data-lang-bn="সেরা">Best</p><p class="text-sm font-bold text-yellow-400" id="best-score">0%</p></div></div>
+          </div>
+
+          <!-- Start Button -->
+          <button id="btn-generate" onclick="startQuiz()" class="btn-primary w-full py-4 rounded-2xl font-bold text-lg" disabled style="opacity:0.5">
+            <i data-lucide="play" class="w-5 h-5 inline mr-2"></i>
+            <span data-lang-en="Start Quiz" data-lang-bn="কুইজ শুরু করুন">Start Quiz</span>
+          </button>
+
+          <!-- Bookmarks -->
+          <button onclick="showBookmarks()" class="btn-secondary w-full py-3 rounded-2xl text-sm font-medium">
+            <i data-lucide="bookmark" class="w-4 h-4 inline mr-1"></i>
+            <span data-lang-en="Saved Questions" data-lang-bn="সংরক্ষিত প্রশ্ন">Saved Questions</span>
+            <span id="bookmark-count" class="ml-2 badge">0</span>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- Leaderboard -->
+      <div id="leaderboard-card" class="glass-card rounded-3xl p-4 hidden">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <i data-lucide="trophy" class="w-3.5 h-3.5 text-yellow-400"></i>
+          <span data-lang-en="Recent Scores" data-lang-bn="সাম্প্রতিক স্কোর">Recent Scores</span>
+        </h3>
+        <div id="leaderboard-list" class="space-y-2 text-sm"></div>
+      </div>
+
+    </section>
+
+    <!-- ══════════════ CHAPTER LOADING ══════════════ -->
+    <section id="screen-loading-chapter" class="screen hidden w-full max-w-sm text-center">
+      <div class="glass-card rounded-3xl p-10">
+        <div class="loader mx-auto mb-4"></div>
+        <p class="text-white font-semibold mb-1" data-lang-en="Loading Chapter…" data-lang-bn="অধ্যায় লোড হচ্ছে…">Loading Chapter…</p>
+        <p class="text-slate-500 text-xs" data-lang-en="Fetching questions from Google Sheets" data-lang-bn="প্রশ্ন আনা হচ্ছে">Fetching questions from Google Sheets</p>
+      </div>
+    </section>
+
+    <!-- ══════════════ QUIZ ══════════════ -->
+    <section id="screen-quiz" class="screen hidden w-full max-w-2xl">
+
+      <!-- Top Bar -->
+      <div class="flex items-center justify-between mb-4">
+        <button onclick="exitQuiz()" class="icon-btn" aria-label="Exit"><i data-lucide="x" class="w-4 h-4"></i></button>
+        <div class="flex items-center gap-2">
+
+          <!-- Exam Countdown -->
+          <div id="timer-display" class="timer-badge hidden">
+            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+            <span id="timer-text" class="font-mono">05:00</span>
+          </div>
+
+          <!-- Practice Stopwatch -->
+          <div id="stopwatch-display" class="stopwatch-badge hidden">
+            <i data-lucide="timer" class="w-3.5 h-3.5"></i>
+            <span id="sw-text" class="font-mono">00:00</span>
+          </div>
+
+          <!-- Lifeline -->
+          <button id="btn-lifeline" onclick="use5050()" class="lifeline-btn" title="50:50">
+            <span class="text-xs font-bold">50:50</span>
+          </button>
+
+          <!-- Bookmark -->
+          <button id="btn-bookmark-cur" onclick="bookmarkCurrent()" class="icon-btn" title="Bookmark">
+            <i data-lucide="bookmark" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="progress-track mb-2"><div id="progress-bar" class="progress-fill" style="width:0%"></div></div>
+      <div class="flex justify-between items-center text-xs text-slate-400 mb-4">
+        <span id="q-counter">Question 1 of 10</span>
+        <span id="q-chapter-tag" class="chapter-tag"></span>
+      </div>
+
+      <!-- Question Card -->
+      <div id="question-card" class="glass-card rounded-3xl p-5 mb-3">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span id="q-difficulty-badge" class="diff-badge easy">Easy</span>
+            <span id="q-id-chip" class="id-chip"></span>
+          </div>
+          <span id="q-score-live" class="text-xs text-slate-400 font-medium">Score: 0</span>
+        </div>
+        <p id="question-text" class="text-white text-base font-medium leading-relaxed mb-5 select-text"></p>
+        <div id="options-grid" class="grid grid-cols-1 gap-2.5"></div>
+      </div>
+
+      <!-- Explanation -->
+      <div id="explanation-panel" class="glass-card rounded-2xl p-4 mb-3 hidden border border-emerald-500/25">
+        <div class="flex items-start gap-3">
+          <span class="text-lg shrink-0">💡</span>
+          <div><p class="text-xs font-bold text-emerald-400 mb-1">Explanation</p>
+          <p id="explanation-text" class="text-sm text-slate-300 leading-relaxed select-text"></p></div>
+        </div>
+      </div>
+
+      <!-- Action Row -->
+      <div class="flex gap-2 mb-2">
+        <button id="btn-prev" onclick="prevQuestion()" class="icon-btn shrink-0" title="Previous" disabled><i data-lucide="arrow-left" class="w-4 h-4"></i></button>
+        <button id="btn-show-answer" onclick="showAnswer()" class="btn-secondary flex-1 py-3 rounded-2xl text-sm hidden">
+          <i data-lucide="eye" class="w-3.5 h-3.5 inline mr-1"></i><span data-lang-en="Show Answer" data-lang-bn="উত্তর দেখুন">Show Answer</span>
+        </button>
+        <button id="btn-next"   onclick="nextQuestion()" class="btn-primary flex-1 py-3 rounded-2xl text-sm font-bold hidden">
+          <span data-lang-en="Next" data-lang-bn="পরবর্তী">Next</span> <i data-lucide="arrow-right" class="w-4 h-4 inline ml-1"></i>
+        </button>
+        <button id="btn-submit" onclick="submitQuiz()" class="btn-primary flex-1 py-3 rounded-2xl text-sm font-bold hidden">
+          <i data-lucide="check-circle" class="w-4 h-4 inline mr-1"></i><span data-lang-en="Submit" data-lang-bn="জমা দিন">Submit</span>
+        </button>
+      </div>
+
+      <p class="text-center text-xs text-slate-600">
+        <span data-lang-en="Keys: 1–4 / A–D  ·  ← Back  ·  → Next  ·  Esc Exit" data-lang-bn="কী: 1–4 / A–D · ← আগে · → পরে">
+          Keys: 1–4 / A–D  ·  ← Back  ·  → Next  ·  Esc Exit
+        </span>
+      </p>
+
+    </section>
+
+    <!-- ══════════════ RESULT ══════════════ -->
+    <section id="screen-result" class="screen hidden w-full max-w-lg">
+      <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50" aria-hidden="true"></canvas>
+
+      <div class="glass-card rounded-3xl p-6 mb-4 animate-slideUp text-center">
+        <div id="result-emoji" class="text-6xl mb-2">🎯</div>
+        <h2 class="text-2xl font-bold font-space text-white mb-1" id="result-title">Excellent!</h2>
+        <p class="text-xs text-slate-500 mb-1" id="result-meta"></p>
+        <p class="text-xs text-slate-600 mb-5" id="result-time"></p>
+
+        <!-- Ring -->
+        <div class="score-ring mx-auto mb-5">
+          <svg viewBox="0 0 120 120" class="w-32 h-32">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="#ffffff08" stroke-width="10"/>
+            <circle id="score-circle" cx="60" cy="60" r="50" fill="none" stroke="url(#sGrad)" stroke-width="10" stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="314" transform="rotate(-90 60 60)"/>
+            <defs><linearGradient id="sGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient></defs>
+          </svg>
+          <div class="score-center"><span id="score-percent" class="text-3xl font-bold text-white score-animate">0%</span></div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-3 gap-2 mb-5">
+          <div class="stat-card"><p class="text-2xl font-bold text-emerald-400" id="stat-correct">0</p><p class="text-xs text-slate-400" data-lang-en="Correct" data-lang-bn="সঠিক">Correct</p></div>
+          <div class="stat-card"><p class="text-2xl font-bold text-red-400"     id="stat-wrong">0</p>  <p class="text-xs text-slate-400" data-lang-en="Wrong"   data-lang-bn="ভুল">Wrong</p></div>
+          <div class="stat-card"><p class="text-2xl font-bold text-slate-300"   id="stat-skip">0</p>   <p class="text-xs text-slate-400" data-lang-en="Skipped" data-lang-bn="এড়িয়ে">Skipped</p></div>
+        </div>
+
+        <div class="final-score-bar mb-5">
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-400" data-lang-en="Final Score" data-lang-bn="চূড়ান্ত স্কোর">Final Score</span>
+            <span class="text-white font-bold" id="final-score-text">0 / 10</span>
+          </div>
+        </div>
+
+        <div id="badges-earned" class="flex flex-wrap gap-2 justify-center mb-5"></div>
+
+        <div class="text-left mb-5">
+          <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3" data-lang-en="Chapter Performance" data-lang-bn="পারফরম্যান্স">Chapter Performance</h3>
+          <div id="chapter-accuracy"></div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="retryWrong()" id="btn-retry-wrong" class="btn-secondary py-3 rounded-2xl text-sm">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5 inline mr-1"></i><span data-lang-en="Retry Wrong" data-lang-bn="ভুল আবার">Retry Wrong</span>
+            </button>
+            <button onclick="newQuiz()" class="btn-primary py-3 rounded-2xl text-sm font-bold">
+              <i data-lucide="plus" class="w-3.5 h-3.5 inline mr-1"></i><span data-lang-en="New Quiz" data-lang-bn="নতুন কুইজ">New Quiz</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="exportPDF()"   class="btn-secondary py-3 rounded-2xl text-sm"><i data-lucide="download"  class="w-3.5 h-3.5 inline mr-1"></i>Export PDF</button>
+            <button onclick="shareResult()" class="btn-secondary py-3 rounded-2xl text-sm"><i data-lucide="share-2"   class="w-3.5 h-3.5 inline mr-1"></i><span data-lang-en="Share" data-lang-bn="শেয়ার">Share</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Review -->
+      <div class="glass-card rounded-3xl p-4 mb-4">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <i data-lucide="list" class="w-3.5 h-3.5"></i><span data-lang-en="Review" data-lang-bn="পর্যালোচনা">Review</span>
+        </h3>
+        <div id="review-list" class="space-y-2.5"></div>
+      </div>
+
+      <div class="text-center pb-4"><p class="text-slate-500 text-sm">ধন্যবাদ! Thanks for playing Quiz Master ❤️</p></div>
+    </section>
+
+  </div>
+
+  <!-- ══ BOOKMARKS MODAL ══ -->
+  <div id="modal-bookmarks" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card glass-card rounded-3xl p-5 w-full max-w-lg mx-4">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-white text-sm flex items-center gap-2"><i data-lucide="bookmark" class="w-4 h-4 text-indigo-400"></i><span data-lang-en="Saved Questions" data-lang-bn="সংরক্ষিত প্রশ্ন">Saved Questions</span></h3>
+        <button onclick="closeBookmarks()" class="icon-btn"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div id="bookmarks-list" class="space-y-2.5 max-h-80 overflow-y-auto pr-1"></div>
+      <button onclick="startBookmarkQuiz()" id="btn-quiz-bookmarks" class="btn-primary w-full py-3 rounded-2xl text-sm font-bold mt-4 hidden">
+        <i data-lucide="play" class="w-3.5 h-3.5 inline mr-1"></i><span data-lang-en="Quiz from Bookmarks" data-lang-bn="বুকমার্ক থেকে কুইজ">Quiz from Bookmarks</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ EXIT MODAL ══ -->
+  <div id="modal-exit" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card glass-card rounded-3xl p-6 w-full max-w-sm mx-4 text-center">
+      <div class="text-4xl mb-3">🚪</div>
+      <h3 class="font-bold text-white mb-2" data-lang-en="Exit Quiz?" data-lang-bn="কুইজ বন্ধ করবেন?">Exit Quiz?</h3>
+      <p class="text-sm text-slate-400 mb-5" data-lang-en="Your progress will be lost." data-lang-bn="অগ্রগতি হারাবে।">Your progress will be lost.</p>
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="cancelExit()" class="btn-secondary py-3 rounded-2xl text-sm"><span data-lang-en="Stay" data-lang-bn="থাকুন">Stay</span></button>
+        <button onclick="_doExitQuiz()" class="btn-danger py-3 rounded-2xl text-sm font-bold"><span data-lang-en="Exit" data-lang-bn="বের হন">Exit</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB WARNING ══ -->
+  <div id="modal-tabwarn" class="modal-overlay hidden" role="alertdialog">
+    <div class="modal-card glass-card rounded-3xl p-6 w-full max-w-sm mx-4 text-center">
+      <div class="text-4xl mb-3">⚠️</div>
+      <h3 class="font-bold text-white mb-2" data-lang-en="Tab Switch!" data-lang-bn="ট্যাব পরিবর্তন!">Tab Switch!</h3>
+      <p class="text-sm text-slate-400 mb-4" id="tab-warn-count">Warning 1/3</p>
+      <button onclick="dismissTabWarn()" class="btn-primary w-full py-3 rounded-2xl text-sm font-bold"><span data-lang-en="Return to Quiz" data-lang-bn="ফিরে যান">Return to Quiz</span></button>
+    </div>
+  </div>
+
+  <script src="utils.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+  <script>if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('pwa/service-worker.js').catch(()=>{}));</script>
+</body>
+</html>
