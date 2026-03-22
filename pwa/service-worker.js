@@ -3,27 +3,36 @@
    Offline support with Cache-First strategy
    ============================================ */
 
-const CACHE_NAME = 'quiz-master-v1.0.0';
+const CACHE_NAME = 'quiz-master-v1.0.3';  // version বাড়িয়েছি যাতে নতুন ক্যাশ হয়
+
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/styles.css',
-  '/app.js',
-  '/data.js',
-  '/utils.js',
-  '/pwa/manifest.json',
+  './',
+  './index.html',
+  './styles.css',
+  './app.js',
+  './data.js',
+  './utils.js',
+  './pwa/manifest.json',  // manifest path ঠিক রাখো (pwa ফোল্ডারে থাকলে)
+  './assets/icons/icon-192.png',
+  './assets/icons/icon-512.png',
   'https://cdn.tailwindcss.com',
   'https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap',
   'https://unpkg.com/lucide@latest/dist/umd/lucide.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js'
 ];
 
 /* ---- Install: Pre-cache static assets ---- */
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(STATIC_ASSETS.filter(url => !url.startsWith('http') || url.includes('cdnjs') || url.includes('unpkg'))))
+      .then(cache => {
+        return cache.addAll(
+          STATIC_ASSETS.filter(url => 
+            !url.startsWith('http') || url.includes('cdnjs') || url.includes('unpkg')
+          )
+        );
+      })
       .then(() => self.skipWaiting())
       .catch(err => console.warn('[SW] Install cache failed:', err))
   );
@@ -76,7 +85,7 @@ self.addEventListener('fetch', (event) => {
     }).catch(() => {
       // Offline fallback for HTML navigation
       if (request.headers.get('accept')?.includes('text/html')) {
-        return caches.match('/index.html');
+        return caches.match('./index.html');
       }
     })
   );
